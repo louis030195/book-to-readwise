@@ -12,6 +12,7 @@ import {
   CheckCircle,
   Clock,
   Filter,
+  X,
 } from "lucide-react";
 
 interface PickedPhoto {
@@ -36,7 +37,7 @@ export function PhotoPicker({
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
-  const [showUnsentOnly, setShowUnsentOnly] = useState(false);
+  const [showUnsentOnly, setShowUnsentOnly] = useState(true);
 
   const getImageStatus = (imageId: string) => {
     try {
@@ -257,6 +258,23 @@ export function PhotoPicker({
     }
   };
 
+  const deletePhoto = (photoId: string) => {
+    console.log("Deleting photo:", photoId);
+    const updatedPhotos = photos.filter((photo) => photo.id !== photoId);
+    setPhotos(updatedPhotos);
+
+    // Update cache
+    localStorage.setItem("selectedPhotos", JSON.stringify(updatedPhotos));
+
+    // Update parent component
+    onPhotosSelected(updatedPhotos);
+
+    console.log(
+      `Photo ${photoId} deleted. Remaining photos:`,
+      updatedPhotos.length
+    );
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -473,6 +491,18 @@ export function PhotoPicker({
                           </div>
                         )}
                       </div>
+
+                      {/* Delete button - appears on hover */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deletePhoto(photo.id);
+                        }}
+                        className="absolute top-2 left-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
+                        title="Remove photo from list"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
                     <p className="text-xs text-gray-500 mt-1 truncate">
                       {photo.filename}
