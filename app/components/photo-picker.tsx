@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   ExternalLink,
   Loader2,
   RefreshCw,
   CheckCircle,
   Clock,
+  Filter,
 } from "lucide-react";
 
 interface PickedPhoto {
@@ -16,6 +19,7 @@ interface PickedPhoto {
   baseUrl: string;
   filename: string;
   mimeType: string;
+  creationTime?: string;
 }
 
 interface PhotoPickerProps {
@@ -32,6 +36,7 @@ export function PhotoPicker({
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+  const [showUnsentOnly, setShowUnsentOnly] = useState(false);
 
   const getImageStatus = (imageId: string) => {
     try {
@@ -50,6 +55,26 @@ export function PhotoPicker({
     return { processed: false, savedToReadwise: false };
   };
 
+  // Sort photos by creation time (newest first)
+  const sortPhotosByDate = (photos: PickedPhoto[]) => {
+    return [...photos].sort((a, b) => {
+      const dateA = a.creationTime ? new Date(a.creationTime).getTime() : 0;
+      const dateB = b.creationTime ? new Date(b.creationTime).getTime() : 0;
+      return dateB - dateA; // Newest first
+    });
+  };
+
+  // Filter photos based on the toggle
+  const getFilteredPhotos = () => {
+    const sortedPhotos = sortPhotosByDate(photos);
+    if (showUnsentOnly) {
+      return sortedPhotos.filter(
+        (photo) => !getImageStatus(photo.id).savedToReadwise
+      );
+    }
+    return sortedPhotos;
+  };
+
   // Load cached photos on component mount
   useEffect(() => {
     // Add a small delay to ensure the component is fully mounted
@@ -60,8 +85,9 @@ export function PhotoPicker({
         try {
           const parsedPhotos = JSON.parse(cachedPhotos);
           console.log("Loading cached photos:", parsedPhotos.length);
-          setPhotos(parsedPhotos);
-          onPhotosSelected(parsedPhotos);
+          const sortedPhotos = sortPhotosByDate(parsedPhotos);
+          setPhotos(sortedPhotos);
+          onPhotosSelected(sortedPhotos);
           console.log("Cached photos loaded successfully");
         } catch (error) {
           console.error("Error loading cached photos:", error);
@@ -151,6 +177,7 @@ export function PhotoPicker({
             baseUrl: item.mediaFile.baseUrl,
             filename: item.mediaFile.filename || `photo_${item.id}`,
             mimeType: item.mediaFile.mimeType,
+            creationTime: item.mediaMetadata?.creationTime || item.creationTime,
           })
         );
 
@@ -199,6 +226,34 @@ export function PhotoPicker({
   const openPhotoPicker = () => {
     if (pickerUri) {
       window.open(pickerUri, "_blank");
+    }
+  };
+
+  const selectMorePhotos = async () => {
+    setLoading(true);
+    try {
+      // Create a new session
+      const response = await fetch("/api/google-photos-picker/session", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create picker session");
+      }
+
+      const sessionData = await response.json();
+      setSessionId(sessionData.id);
+      setPickerUri(sessionData.pickerUri);
+
+      // Automatically open the picker
+      if (sessionData.pickerUri) {
+        window.open(sessionData.pickerUri, "_blank");
+      }
+    } catch (error) {
+      console.error("Error creating picker session:", error);
+      alert("Failed to create picker session. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -273,7 +328,7 @@ export function PhotoPicker({
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <Button
-                  onClick={createSession}
+                  onClick={selectMorePhotos}
                   disabled={loading}
                   variant="outline"
                   className="w-full"
@@ -281,8 +336,9 @@ export function PhotoPicker({
                   {loading ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
-                    "Select More Photos"
+                    <ExternalLink className="h-4 w-4 mr-2" />
                   )}
+                  {loading ? "Creating Session..." : "Select More Photos"}
                 </Button>
 
                 <Button
@@ -294,8 +350,25 @@ export function PhotoPicker({
                 </Button>
               </div>
 
+              {sessionId && pickerUri && (
+                <Button
+                  onClick={pollSession}
+                  disabled={polling}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {polling ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Check for New Photos
+                </Button>
+              )}
+
               <p className="text-sm text-gray-600 text-center">
-                Your selected photos are cached locally. Click on any photo
+                Your selected photos are cached locally. Click "Select More
+                Photos" to add more from Google Photos, or click on any photo
                 below to extract text.
               </p>
             </div>
@@ -306,34 +379,51 @@ export function PhotoPicker({
       {photos.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Selected Photos ({photos.length})</CardTitle>
-            <div className="flex gap-4 text-sm text-gray-600">
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4 text-blue-500" />
-                <span>
-                  {
-                    photos.filter((photo) => getImageStatus(photo.id).processed)
-                      .length
-                  }{" "}
-                  processed
-                </span>
+            <CardTitle>
+              Selected Photos ({getFilteredPhotos().length}
+              {showUnsentOnly && ` of ${photos.length}`})
+            </CardTitle>
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-1">
+                  <Clock className="h-4 w-4 text-blue-500" />
+                  <span>
+                    {
+                      photos.filter(
+                        (photo) => getImageStatus(photo.id).processed
+                      ).length
+                    }{" "}
+                    processed
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>
+                    {
+                      photos.filter(
+                        (photo) => getImageStatus(photo.id).savedToReadwise
+                      ).length
+                    }{" "}
+                    saved to Readwise
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>
-                  {
-                    photos.filter(
-                      (photo) => getImageStatus(photo.id).savedToReadwise
-                    ).length
-                  }{" "}
-                  saved to Readwise
-                </span>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="unsent-only"
+                  checked={showUnsentOnly}
+                  onCheckedChange={setShowUnsentOnly}
+                />
+                <Label htmlFor="unsent-only" className="text-sm">
+                  <Filter className="h-4 w-4 inline mr-1" />
+                  Show only unsent photos
+                </Label>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {photos.map((photo) => {
+              {getFilteredPhotos().map((photo) => {
                 const status = getImageStatus(photo.id);
                 return (
                   <div key={photo.id} className="relative group">
@@ -390,9 +480,14 @@ export function PhotoPicker({
                     <p className="text-xs text-gray-400 truncate">
                       {photo.mimeType}
                     </p>
+                    {photo.creationTime && (
+                      <p className="text-xs text-gray-400 truncate">
+                        📅 {new Date(photo.creationTime).toLocaleDateString()}
+                      </p>
+                    )}
                     {status.savedToReadwise && status.savedAt && (
                       <p className="text-xs text-green-600 truncate">
-                        Saved {new Date(status.savedAt).toLocaleDateString()}
+                        ✅ Saved {new Date(status.savedAt).toLocaleDateString()}
                       </p>
                     )}
                   </div>
