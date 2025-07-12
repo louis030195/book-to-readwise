@@ -145,24 +145,43 @@ export function PhotoPicker({
       console.log("Media data received:", mediaData);
 
       if (mediaData.mediaItems && mediaData.mediaItems.length > 0) {
-        const selectedPhotos = mediaData.mediaItems.map((item: any) => ({
-          id: item.id,
-          baseUrl: item.mediaFile.baseUrl,
-          filename: item.mediaFile.filename || `photo_${item.id}`,
-          mimeType: item.mediaFile.mimeType,
-        }));
+        const selectedPhotos: PickedPhoto[] = mediaData.mediaItems.map(
+          (item: any) => ({
+            id: item.id,
+            baseUrl: item.mediaFile.baseUrl,
+            filename: item.mediaFile.filename || `photo_${item.id}`,
+            mimeType: item.mediaFile.mimeType,
+          })
+        );
 
         console.log("Selected photos:", selectedPhotos);
 
         // Filter for likely document/book photos (aspect ratio close to paper)
-        const documentPhotos = selectedPhotos.filter((photo: any) => {
+        const documentPhotos = selectedPhotos.filter((photo: PickedPhoto) => {
           // This is a basic filter - you might want to add more sophisticated filtering
           return photo.mimeType.startsWith("image/");
         });
 
-        setPhotos(documentPhotos);
-        onPhotosSelected(documentPhotos);
-        alert(`Successfully loaded ${documentPhotos.length} photos!`);
+        setPhotos((prevPhotos) => {
+          const existingPhotoIds = new Set(
+            prevPhotos.map((p: PickedPhoto) => p.id)
+          );
+          const photosToAdd = documentPhotos.filter(
+            (p: PickedPhoto) => !existingPhotoIds.has(p.id)
+          );
+
+          if (photosToAdd.length === 0) {
+            alert("All selected photos have already been added.");
+            return prevPhotos;
+          }
+
+          const updatedPhotos = [...prevPhotos, ...photosToAdd];
+          onPhotosSelected(updatedPhotos);
+          alert(
+            `Successfully added ${photosToAdd.length} new photos! Total: ${updatedPhotos.length}`
+          );
+          return updatedPhotos;
+        });
       } else {
         console.log("No photos found in response");
         alert(
