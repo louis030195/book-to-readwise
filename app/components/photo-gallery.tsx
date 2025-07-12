@@ -49,7 +49,7 @@ export function PhotoGallery({ photos, onPhotoSelect, loading }: PhotoGalleryPro
           <CardContent className="p-2">
             <div className="aspect-square relative overflow-hidden rounded-md">
               <Image
-                src={`${photo.baseUrl}=w400-h400-c`}
+                src={`/api/proxy-image?url=${encodeURIComponent(photo.baseUrl + "=w400-h400-c")}`}
                 alt={photo.filename}
                 fill
                 className="object-cover"

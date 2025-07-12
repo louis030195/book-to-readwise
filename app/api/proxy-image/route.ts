@@ -25,12 +25,37 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch the image with authentication
-    const response = await fetch(imageUrl, {
+    let response = await fetch(imageUrl, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "User-Agent": "Mozilla/5.0 (compatible; PhotoProxy/1.0)",
       },
     });
+
+    // If image fetch fails with 401, try to refresh token and retry
+    if (response.status === 401) {
+      console.log("Image fetch failed with 401, attempting token refresh...");
+      const refreshResponse = await fetch(`${request.nextUrl.origin}/api/auth/google/refresh`, {
+        method: "POST",
+      });
+
+      if (refreshResponse.ok) {
+        console.log("Token refreshed successfully, retrying image fetch...");
+        // Get the refreshed token
+        const refreshedCookieStore = await cookies();
+        const refreshedAccessToken = refreshedCookieStore.get("google_access_token")?.value;
+        
+        if (refreshedAccessToken) {
+          // Retry image fetch with refreshed token
+          response = await fetch(imageUrl, {
+            headers: {
+              Authorization: `Bearer ${refreshedAccessToken}`,
+              "User-Agent": "Mozilla/5.0 (compatible; PhotoProxy/1.0)",
+            },
+          });
+        }
+      }
+    }
 
     if (!response.ok) {
       console.error(

@@ -122,12 +122,37 @@ export function PhotoPicker({
   const createSession = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/google-photos-picker/session", {
+      let response = await fetch("/api/google-photos-picker/session", {
         method: "POST",
       });
 
+      // If session creation fails with 401, try to refresh the token
+      if (response.status === 401) {
+        console.log(
+          "Session creation failed with 401, attempting token refresh..."
+        );
+        const refreshResponse = await fetch("/api/auth/google/refresh", {
+          method: "POST",
+        });
+
+        if (refreshResponse.ok) {
+          console.log(
+            "Token refreshed successfully, retrying session creation..."
+          );
+          // Retry session creation after token refresh
+          response = await fetch("/api/google-photos-picker/session", {
+            method: "POST",
+          });
+        } else {
+          throw new Error(
+            "Authentication expired. Please refresh the page and sign in again."
+          );
+        }
+      }
+
       if (!response.ok) {
-        throw new Error("Failed to create picker session");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to create picker session");
       }
 
       const sessionData = await response.json();
@@ -135,7 +160,11 @@ export function PhotoPicker({
       setPickerUri(sessionData.pickerUri);
     } catch (error) {
       console.error("Error creating picker session:", error);
-      alert("Failed to create picker session. Please try again.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to create picker session. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -234,12 +263,37 @@ export function PhotoPicker({
     setLoading(true);
     try {
       // Create a new session
-      const response = await fetch("/api/google-photos-picker/session", {
+      let response = await fetch("/api/google-photos-picker/session", {
         method: "POST",
       });
 
+      // If session creation fails with 401, try to refresh the token
+      if (response.status === 401) {
+        console.log(
+          "Session creation failed with 401, attempting token refresh..."
+        );
+        const refreshResponse = await fetch("/api/auth/google/refresh", {
+          method: "POST",
+        });
+
+        if (refreshResponse.ok) {
+          console.log(
+            "Token refreshed successfully, retrying session creation..."
+          );
+          // Retry session creation after token refresh
+          response = await fetch("/api/google-photos-picker/session", {
+            method: "POST",
+          });
+        } else {
+          throw new Error(
+            "Authentication expired. Please refresh the page and sign in again."
+          );
+        }
+      }
+
       if (!response.ok) {
-        throw new Error("Failed to create picker session");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to create picker session");
       }
 
       const sessionData = await response.json();
@@ -252,7 +306,11 @@ export function PhotoPicker({
       }
     } catch (error) {
       console.error("Error creating picker session:", error);
-      alert("Failed to create picker session. Please try again.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to create picker session. Please try again."
+      );
     } finally {
       setLoading(false);
     }
