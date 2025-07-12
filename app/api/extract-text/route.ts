@@ -175,13 +175,12 @@ export async function POST(request: NextRequest) {
                       : ""
                   }
               
-              2.  **Verbatim Transcription:** Transcribe the highlighted text with 100% accuracy. More especially, extract the powerful quote with EXACT accuracy that I will store in my Readwise as a highlight/quote from the book.
+              2.  **Quote extraction:** Extract the powerful quote with EXACT accuracy that I will store in my Readwise as a highlight/quote from the book.
               
-              3.  **Distilled Note:** Synthesize the transcription into a single, high-signal note for my future self. The note must be:
-                  *   **Actionable:** Frame it as a command, a testable hypothesis, or a core question to investigate.
-                  *   **Pragmatic:** Strip all fluff. What is the raw, operational takeaway?
-                  *   **Driver-Aligned:** (Optional but preferred) Briefly hint at which of my core drivers (Truth, Wealth, Longevity, Love) this insight serves.
-              
+              3.  **Aphorism:** Synthesize the transcription into a single, one liner, high-signal aphorism for my future self, aligned with my personality:
+
+              Louis Beaumont is a mission-driven founder focused on ending death and scaling consciousness through AI native systems, particularly with his company Mediar, which automates legacy Windows workflows. He operates with extreme discipline and a data-driven approach, prioritizing truth, wealth, longevity, love, and a strong belief in the programmability of reality.
+                  
               4.  **Tag Generation:** Generate a list of 3-5 relevant, concise tags (e.g., "decision-making", "philosophy", "mental-models").
               
               5. **No quotes or citations:** If there is no clear quote, generate a cheatsheet / card type note for my spaced repetition system. / PKM`,
