@@ -182,7 +182,9 @@ export async function POST(request: NextRequest) {
                   *   **Pragmatic:** Strip all fluff. What is the raw, operational takeaway?
                   *   **Driver-Aligned:** (Optional but preferred) Briefly hint at which of my core drivers (Truth, Wealth, Longevity, Love) this insight serves.
               
-              4.  **Tag Generation:** Generate a list of 3-5 relevant, concise tags (e.g., "decision-making", "philosophy", "mental-models").`,
+              4.  **Tag Generation:** Generate a list of 3-5 relevant, concise tags (e.g., "decision-making", "philosophy", "mental-models").
+              
+              5. **No quotes or citations:** If there is no clear quote, generate a cheatsheet / card type note for my spaced repetition system. / PKM`,
             },
             {
               type: "image",
