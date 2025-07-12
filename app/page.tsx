@@ -1,90 +1,71 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { PhotoGallery } from "./components/photo-gallery"
-import { TextExtractor } from "./components/text-extractor"
-import { GooglePhotosAuth } from "./components/google-photos-auth"
-import { Loader2 } from "lucide-react"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { PhotoPicker } from "./components/photo-picker";
+import { TextExtractor } from "./components/text-extractor";
+import { GooglePhotosAuth } from "./components/google-photos-auth";
+import { Loader2 } from "lucide-react";
 
 interface Photo {
-  id: string
-  baseUrl: string
-  filename: string
-  creationTime: string
-  mimeType: string
+  id: string;
+  baseUrl: string;
+  filename: string;
+  mimeType: string;
 }
 
 export default function HomePage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [photos, setPhotos] = useState<Photo[]>([])
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [authLoading, setAuthLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [allPhotos, setAllPhotos] = useState<Photo[]>([]);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    checkAuthStatus()
+    checkAuthStatus();
 
     // Check for auth success in URL params
-    const urlParams = new URLSearchParams(window.location.search)
+    const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("auth") === "success") {
-      setIsAuthenticated(true)
-      fetchPhotos()
+      setIsAuthenticated(true);
       // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname)
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [])
+  }, []);
 
   const checkAuthStatus = async () => {
     try {
       // Check if we have the authentication cookie
-      const authCookie = document.cookie.split("; ").find((row) => row.startsWith("google_authenticated="))
+      const authCookie = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("google_authenticated="));
 
       if (authCookie) {
-        setIsAuthenticated(true)
-        await fetchPhotos()
+        setIsAuthenticated(true);
       }
     } catch (error) {
-      console.error("Error checking auth status:", error)
+      console.error("Error checking auth status:", error);
     } finally {
-      setAuthLoading(false)
+      setAuthLoading(false);
     }
-  }
+  };
 
   const handleAuthSuccess = async () => {
-    setIsAuthenticated(true)
-    await fetchPhotos()
-  }
+    setIsAuthenticated(true);
+  };
 
-  const fetchPhotos = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch("/api/google-photos/list")
-      const data = await response.json()
+  const handlePhotosSelected = (photos: Photo[]) => {
+    setAllPhotos(photos);
+    console.log("Photos updated in main page:", photos.length);
+  };
 
-      if (response.ok) {
-        setPhotos(data.photos || [])
-      } else {
-        console.error("Failed to fetch photos:", data.error)
-        if (response.status === 401) {
-          setIsAuthenticated(false)
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching photos:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handlePhotoSelect = (photo: Photo) => {
-    setSelectedPhoto(photo)
-  }
+  const handlePhotoClick = (photo: Photo) => {
+    setSelectedPhoto(photo);
+  };
 
   const handleBackToGallery = () => {
-    setSelectedPhoto(null)
-  }
+    setSelectedPhoto(null);
+  };
 
   if (authLoading) {
     return (
@@ -96,7 +77,7 @@ export default function HomePage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   if (!isAuthenticated) {
@@ -106,17 +87,18 @@ export default function HomePage() {
           <CardContent className="p-6 text-center">
             <h1 className="text-2xl font-bold mb-4">Photo Notes Extractor</h1>
             <p className="text-gray-600 mb-6">
-              Connect your Google Photos to start extracting book highlights and notes
+              Connect your Google Photos to start extracting book highlights and
+              notes
             </p>
             <GooglePhotosAuth onAuthSuccess={handleAuthSuccess} />
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   if (selectedPhoto) {
-    return <TextExtractor photo={selectedPhoto} onBack={handleBackToGallery} />
+    return <TextExtractor photo={selectedPhoto} onBack={handleBackToGallery} />;
   }
 
   return (
@@ -125,17 +107,16 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">Photo Notes</h1>
-            <Button onClick={fetchPhotos} disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Refresh Photos
-            </Button>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <PhotoGallery photos={photos} onPhotoSelect={handlePhotoSelect} loading={loading} />
+        <PhotoPicker
+          onPhotosSelected={handlePhotosSelected}
+          onPhotoClick={handlePhotoClick}
+        />
       </main>
     </div>
-  )
+  );
 }

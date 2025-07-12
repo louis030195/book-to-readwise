@@ -1,0 +1,388 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  CheckCircle,
+  Clock,
+} from "lucide-react";
+
+interface PickedPhoto {
+  id: string;
+  baseUrl: string;
+  filename: string;
+  mimeType: string;
+}
+
+interface PhotoPickerProps {
+  onPhotosSelected: (photos: PickedPhoto[]) => void;
+  onPhotoClick: (photo: PickedPhoto) => void;
+}
+
+export function PhotoPicker({
+  onPhotosSelected,
+  onPhotoClick,
+}: PhotoPickerProps) {
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [pickerUri, setPickerUri] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [polling, setPolling] = useState(false);
+  const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+
+  const getImageStatus = (imageId: string) => {
+    try {
+      const cached = localStorage.getItem(`highlight_${imageId}`);
+      if (cached) {
+        const data = JSON.parse(cached);
+        return {
+          processed: true,
+          savedToReadwise: data.savedToReadwise || false,
+          savedAt: data.savedAt,
+        };
+      }
+    } catch (error) {
+      console.error("Error checking image status:", error);
+    }
+    return { processed: false, savedToReadwise: false };
+  };
+
+  // Load cached photos on component mount
+  useEffect(() => {
+    // Add a small delay to ensure the component is fully mounted
+    const loadCachedPhotos = () => {
+      const cachedPhotos = localStorage.getItem("selectedPhotos");
+      console.log("Checking for cached photos:", !!cachedPhotos);
+      if (cachedPhotos) {
+        try {
+          const parsedPhotos = JSON.parse(cachedPhotos);
+          console.log("Loading cached photos:", parsedPhotos.length);
+          setPhotos(parsedPhotos);
+          onPhotosSelected(parsedPhotos);
+          console.log("Cached photos loaded successfully");
+        } catch (error) {
+          console.error("Error loading cached photos:", error);
+          localStorage.removeItem("selectedPhotos");
+        }
+      } else {
+        console.log("No cached photos found");
+      }
+    };
+
+    // Load cached photos after a brief delay
+    const timer = setTimeout(loadCachedPhotos, 100);
+    return () => clearTimeout(timer);
+  }, []); // Remove onPhotosSelected dependency to avoid infinite loops
+
+  // Save photos to cache whenever photos change
+  useEffect(() => {
+    if (photos.length > 0) {
+      localStorage.setItem("selectedPhotos", JSON.stringify(photos));
+      console.log("Cached photos:", photos.length);
+    }
+  }, [photos]);
+
+  const clearCache = () => {
+    localStorage.removeItem("selectedPhotos");
+    setPhotos([]);
+    onPhotosSelected([]);
+    alert("Photo cache cleared!");
+  };
+
+  const createSession = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/google-photos-picker/session", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create picker session");
+      }
+
+      const sessionData = await response.json();
+      setSessionId(sessionData.id);
+      setPickerUri(sessionData.pickerUri);
+    } catch (error) {
+      console.error("Error creating picker session:", error);
+      alert("Failed to create picker session. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pollSession = async () => {
+    if (!sessionId) return;
+
+    setPolling(true);
+    try {
+      console.log("Polling session:", sessionId);
+      const response = await fetch(
+        `/api/google-photos-picker/media-items?sessionId=${sessionId}`
+      );
+
+      console.log("Poll response status:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.log("Poll error data:", errorData);
+
+        if (errorData.needsSelection) {
+          // User hasn't selected photos yet
+          alert(
+            "Please select photos in the Google Photos Picker first, then come back and click 'Check for Selected Photos'"
+          );
+          return;
+        }
+
+        throw new Error(errorData.error || "Failed to fetch selected photos");
+      }
+
+      const mediaData = await response.json();
+      console.log("Media data received:", mediaData);
+
+      if (mediaData.mediaItems && mediaData.mediaItems.length > 0) {
+        const selectedPhotos = mediaData.mediaItems.map((item: any) => ({
+          id: item.id,
+          baseUrl: item.mediaFile.baseUrl,
+          filename: item.mediaFile.filename || `photo_${item.id}`,
+          mimeType: item.mediaFile.mimeType,
+        }));
+
+        console.log("Selected photos:", selectedPhotos);
+
+        // Filter for likely document/book photos (aspect ratio close to paper)
+        const documentPhotos = selectedPhotos.filter((photo: any) => {
+          // This is a basic filter - you might want to add more sophisticated filtering
+          return photo.mimeType.startsWith("image/");
+        });
+
+        setPhotos(documentPhotos);
+        onPhotosSelected(documentPhotos);
+        alert(`Successfully loaded ${documentPhotos.length} photos!`);
+      } else {
+        console.log("No photos found in response");
+        alert(
+          "No photos were selected. Please try selecting photos in the Google Photos Picker."
+        );
+      }
+    } catch (error) {
+      console.error("Error polling session:", error);
+      alert(`Error: ${error}`);
+    } finally {
+      setPolling(false);
+    }
+  };
+
+  const openPhotoPicker = () => {
+    if (pickerUri) {
+      window.open(pickerUri, "_blank");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Select Book Photos from Google Photos</CardTitle>
+          <p className="text-sm text-gray-600">
+            Choose photos of book pages, documents, or handwritten notes that
+            you want to extract text from and sync to Readwise.
+          </p>
+          {photos.length > 0 && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-2">
+              <p className="text-sm text-green-800">
+                ✅ {photos.length} photos loaded{" "}
+                {localStorage.getItem("selectedPhotos") ? "(cached)" : ""}
+              </p>
+            </div>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {photos.length === 0 ? (
+            <>
+              {!sessionId ? (
+                <Button
+                  onClick={createSession}
+                  disabled={loading}
+                  className="w-full"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    "Start Photo Selection"
+                  )}
+                </Button>
+              ) : (
+                <div className="space-y-4">
+                  <Button
+                    onClick={openPhotoPicker}
+                    className="w-full"
+                    disabled={!pickerUri}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Google Photos Picker
+                  </Button>
+
+                  <p className="text-sm text-gray-600 text-center">
+                    Click the button above to select photos of book pages,
+                    documents, or notes from your Google Photos library. After
+                    selecting your book photos, come back here and click "Check
+                    for Selected Photos".
+                  </p>
+
+                  <Button
+                    onClick={pollSession}
+                    disabled={polling}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {polling ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
+                    Check for Selected Photos
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Button
+                  onClick={createSession}
+                  disabled={loading}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    "Select More Photos"
+                  )}
+                </Button>
+
+                <Button
+                  onClick={clearCache}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Clear All Photos
+                </Button>
+              </div>
+
+              <p className="text-sm text-gray-600 text-center">
+                Your selected photos are cached locally. Click on any photo
+                below to extract text.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {photos.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Selected Photos ({photos.length})</CardTitle>
+            <div className="flex gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-1">
+                <Clock className="h-4 w-4 text-blue-500" />
+                <span>
+                  {
+                    photos.filter((photo) => getImageStatus(photo.id).processed)
+                      .length
+                  }{" "}
+                  processed
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span>
+                  {
+                    photos.filter(
+                      (photo) => getImageStatus(photo.id).savedToReadwise
+                    ).length
+                  }{" "}
+                  saved to Readwise
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {photos.map((photo) => {
+                const status = getImageStatus(photo.id);
+                return (
+                  <div key={photo.id} className="relative group">
+                    <div className="w-full h-32 bg-gray-200 rounded-lg cursor-pointer hover:opacity-80 transition-opacity flex items-center justify-center relative">
+                      <img
+                        src={`/api/proxy-image?url=${encodeURIComponent(
+                          photo.baseUrl + "=w300-h300-c"
+                        )}`}
+                        alt={photo.filename}
+                        className="w-full h-full object-cover rounded-lg"
+                        onClick={() => onPhotoClick(photo)}
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          // Show a placeholder with photo info
+                          img.style.display = "none";
+                          const parent = img.parentElement;
+                          if (parent) {
+                            parent.innerHTML = `
+                              <div class="w-full h-full flex flex-col items-center justify-center text-gray-500 text-xs p-2">
+                                <div class="w-8 h-8 bg-gray-300 rounded mb-1"></div>
+                                <div class="text-center">
+                                  <div class="font-medium">${photo.filename}</div>
+                                  <div class="text-gray-400">${photo.mimeType}</div>
+                                </div>
+                              </div>
+                            `;
+                          }
+                        }}
+                      />
+
+                      {/* Status indicators */}
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        {status.processed && (
+                          <div
+                            className="bg-blue-500 text-white rounded-full p-1"
+                            title="Processed"
+                          >
+                            <Clock className="h-3 w-3" />
+                          </div>
+                        )}
+                        {status.savedToReadwise && (
+                          <div
+                            className="bg-green-500 text-white rounded-full p-1"
+                            title="Saved to Readwise"
+                          >
+                            <CheckCircle className="h-3 w-3" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1 truncate">
+                      {photo.filename}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {photo.mimeType}
+                    </p>
+                    {status.savedToReadwise && status.savedAt && (
+                      <p className="text-xs text-green-600 truncate">
+                        Saved {new Date(status.savedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
