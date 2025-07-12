@@ -83,9 +83,9 @@ export async function POST(request: NextRequest) {
       // Filter out empty tags and format properly
       const validTags = tags.filter((tag: string) => tag && tag.trim());
       if (validTags.length > 0) {
-        // Use hashtag format for proper tag recognition in Readwise
+        // Use inline tagging format with dots for proper tag recognition in Readwise
         const tagString = validTags
-          .map((tag: string) => `#${tag.trim().replace(/\s+/g, "-")}`)
+          .map((tag: string) => `.${tag.trim().replace(/\s+/g, "-")}`)
           .join(" ");
         finalNote = finalNote ? `${finalNote}\n\n${tagString}` : tagString;
       }
