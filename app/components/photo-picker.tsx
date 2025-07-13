@@ -112,6 +112,70 @@ export function PhotoPicker({
     }
   }, [photos]);
 
+  // Background text extraction for newly added photos
+  useEffect(() => {
+    // Helper to check if a photo already has cached highlight
+    const isPhotoProcessed = (photoId: string) => {
+      try {
+        return localStorage.getItem(`highlight_${photoId}`) !== null;
+      } catch {
+        return false;
+      }
+    };
+
+    // Extract text and cache for a single photo
+    const extractAndCacheText = async (photo: PickedPhoto) => {
+      if (isPhotoProcessed(photo.id)) return; // nothing to do
+      try {
+        const imageUrl = `${photo.baseUrl}=w1024-h1024-c`;
+        const resp = await fetch("/api/extract-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl }),
+        });
+        if (!resp.ok) {
+          console.error("Failed to extract text for photo", photo.id, resp.status);
+          return;
+        }
+        const data = await resp.json();
+
+        // Build the highlight cache structure expected by TextExtractor
+        const highlightData = {
+          imageId: photo.id,
+          extractedText: data,
+          selectedText: data.fullText || "",
+          selectedBook:
+            data.isBookContent && data.suggestedBookTitle
+              ? {
+                  id: null,
+                  title: data.suggestedBookTitle,
+                  author: data.suggestedAuthor || "",
+                }
+              : { id: null, title: "" },
+          customNote: "",
+          tags: data.tags || [],
+          savedToReadwise: false,
+        } as any;
+
+        localStorage.setItem(
+          `highlight_${photo.id}`,
+          JSON.stringify(highlightData)
+        );
+        // Force a re-render so status indicators update
+        setPhotos((prev: PickedPhoto[]) => [...prev]);
+      } catch (err) {
+        console.error("Error during background extraction for", photo.id, err);
+      }
+    };
+
+    // Kick off extraction for any photos that are not yet processed
+    photos.forEach((p: PickedPhoto) => {
+      if (!isPhotoProcessed(p.id)) {
+        extractAndCacheText(p);
+      }
+    });
+  }, [photos]);
+
   const clearCache = () => {
     localStorage.removeItem("selectedPhotos");
     setPhotos([]);
