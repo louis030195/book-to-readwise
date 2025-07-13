@@ -76,6 +76,17 @@ export function PhotoPicker({
     return sortedPhotos;
   };
 
+  // Remove duplicate photos based on their Google Photos media id
+  const deduplicatePhotos = (photos: PickedPhoto[]) => {
+    const unique = new Map<string, PickedPhoto>();
+    photos.forEach((photo) => {
+      if (!unique.has(photo.id)) {
+        unique.set(photo.id, photo);
+      }
+    });
+    return Array.from(unique.values());
+  };
+
   // Load cached photos on component mount
   useEffect(() => {
     // Add a small delay to ensure the component is fully mounted
@@ -85,8 +96,9 @@ export function PhotoPicker({
       if (cachedPhotos) {
         try {
           const parsedPhotos = JSON.parse(cachedPhotos);
-          console.log("Loading cached photos:", parsedPhotos.length);
-          const sortedPhotos = sortPhotosByDate(parsedPhotos);
+          const uniquePhotos = deduplicatePhotos(parsedPhotos);
+          console.log("Loading cached photos:", uniquePhotos.length);
+          const sortedPhotos = sortPhotosByDate(uniquePhotos);
           setPhotos(sortedPhotos);
           onPhotosSelected(sortedPhotos);
           console.log("Cached photos loaded successfully");
@@ -107,7 +119,11 @@ export function PhotoPicker({
   // Save photos to cache whenever photos change
   useEffect(() => {
     if (photos.length > 0) {
-      localStorage.setItem("selectedPhotos", JSON.stringify(photos));
+      // Always persist a deduplicated list
+      localStorage.setItem(
+        "selectedPhotos",
+        JSON.stringify(deduplicatePhotos(photos))
+      );
       console.log("Cached photos:", photos.length);
     }
   }, [photos]);
