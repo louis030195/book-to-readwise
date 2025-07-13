@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import type { SyntheticEvent, MouseEvent } from "react";
 import {
   ExternalLink,
   Loader2,
@@ -28,6 +29,46 @@ interface PickedPhoto {
 interface PhotoPickerProps {
   onPhotosSelected: (photos: PickedPhoto[]) => void;
   onPhotoClick: (photo: PickedPhoto) => void;
+}
+
+interface ExtractedText {
+  fullText: string;
+  confidence: number;
+  isBookContent: boolean;
+  suggestedBookTitle?: string;
+  suggestedAuthor?: string;
+  tags?: string[];
+}
+
+interface SelectedBook {
+  id: string | null;
+  title: string;
+  author?: string;
+}
+
+interface CachedHighlight {
+  imageId: string;
+  extractedText: ExtractedText;
+  selectedText: string;
+  selectedBook: SelectedBook;
+  customNote: string;
+  tags: string[];
+  savedToReadwise: boolean;
+  savedBookId?: string;
+  savedAt?: string;
+}
+
+interface GoogleMediaItem {
+  id: string;
+  mediaFile: {
+    baseUrl: string;
+    filename?: string;
+    mimeType: string;
+  };
+  mediaMetadata?: {
+    creationTime?: string;
+  };
+  creationTime?: string;
 }
 
 export function PhotoPicker({
@@ -66,7 +107,7 @@ export function PhotoPicker({
 
   // Sort photos by creation time (newest first)
   const sortPhotosByDate = (photos: PickedPhoto[]) => {
-    return [...photos].sort((a, b) => {
+    return [...photos].sort((a: PickedPhoto, b: PickedPhoto) => {
       const dateA = a.creationTime ? new Date(a.creationTime).getTime() : 0;
       const dateB = b.creationTime ? new Date(b.creationTime).getTime() : 0;
       return dateB - dateA; // Newest first
@@ -134,6 +175,69 @@ export function PhotoPicker({
       );
       console.log("Cached photos:", photos.length);
     }
+  }, [photos]);
+
+  // Background text extraction for newly added photos
+  useEffect(() => {
+    // Helper to check if a photo already has cached highlight
+    const isPhotoProcessed = (photoId: string) => {
+      try {
+        return localStorage.getItem(`highlight_${photoId}`) !== null;
+      } catch {
+        return false;
+      }
+    };
+
+    // Extract text and cache for a single photo
+    const extractAndCacheText = async (photo: PickedPhoto) => {
+      if (isPhotoProcessed(photo.id)) return; // nothing to do
+      try {
+        const imageUrl = `${photo.baseUrl}=w1024-h1024-c`;
+        const resp = await fetch("/api/extract-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl }),
+        });
+        if (!resp.ok) {
+          console.error("Failed to extract text for photo", photo.id, resp.status);
+          return;
+        }
+        const data: ExtractedText = await resp.json();
+
+        const highlightData: CachedHighlight = {
+          imageId: photo.id,
+          extractedText: data,
+          selectedText: data.fullText || "",
+          selectedBook:
+            data.isBookContent && data.suggestedBookTitle
+              ? {
+                  id: null,
+                  title: data.suggestedBookTitle,
+                  author: data.suggestedAuthor || "",
+                }
+              : { id: null, title: "" },
+          customNote: "",
+          tags: data.tags || [],
+          savedToReadwise: false,
+        };
+
+        localStorage.setItem(
+          `highlight_${photo.id}`,
+          JSON.stringify(highlightData)
+        );
+        // Force a re-render so status indicators update
+        setPhotos((prev: PickedPhoto[]) => [...prev]);
+      } catch (err) {
+        console.error("Error during background extraction for", photo.id, err);
+      }
+    };
+
+    // Kick off extraction for any photos that are not yet processed
+    photos.forEach((p: PickedPhoto) => {
+      if (!isPhotoProcessed(p.id)) {
+        extractAndCacheText(p);
+      }
+    });
   }, [photos]);
 
   const clearCache = () => {
@@ -226,7 +330,7 @@ export function PhotoPicker({
 
       if (mediaData.mediaItems && mediaData.mediaItems.length > 0) {
         const selectedPhotos: PickedPhoto[] = mediaData.mediaItems.map(
-          (item: any) => ({
+          (item: GoogleMediaItem) => ({
             id: item.id,
             baseUrl: item.mediaFile.baseUrl,
             filename: item.mediaFile.filename || `photo_${item.id}`,
@@ -490,7 +594,7 @@ export function PhotoPicker({
                   <span>
                     {
                       photos.filter(
-                        (photo) => getImageStatus(photo.id).processed
+                        (photo: PickedPhoto) => getImageStatus(photo.id).processed
                       ).length
                     }{" "}
                     processed
@@ -501,7 +605,7 @@ export function PhotoPicker({
                   <span>
                     {
                       photos.filter(
-                        (photo) => getImageStatus(photo.id).savedToReadwise
+                        (photo: PickedPhoto) => getImageStatus(photo.id).savedToReadwise
                       ).length
                     }{" "}
                     saved to Readwise
@@ -523,7 +627,7 @@ export function PhotoPicker({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {getFilteredPhotos().map((photo) => {
+              {getFilteredPhotos().map((photo: PickedPhoto) => {
                 const status = getImageStatus(photo.id);
                 return (
                   <div key={photo.id} className="relative group">
