@@ -1,6 +1,8 @@
 "use client";
 
+import type React from "react";
 import { useState, useEffect } from "react";
+import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -76,7 +78,7 @@ export function PhotoPicker({
     const sortedPhotos = sortPhotosByDate(photos);
     if (showUnsentOnly) {
       return sortedPhotos.filter(
-        (photo) => !getImageStatus(photo.id).savedToReadwise
+        (photo: PickedPhoto) => !getImageStatus(photo.id).savedToReadwise
       );
     }
     return sortedPhotos;
@@ -340,7 +342,7 @@ export function PhotoPicker({
 
   const deletePhoto = (photoId: string) => {
     console.log("Deleting photo:", photoId);
-    const updatedPhotos = photos.filter((photo) => photo.id !== photoId);
+    const updatedPhotos = photos.filter((photo: PickedPhoto) => photo.id !== photoId);
     setPhotos(updatedPhotos);
 
     // Update cache
