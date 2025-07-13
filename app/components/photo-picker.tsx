@@ -28,6 +28,33 @@ interface PhotoPickerProps {
   onPhotoClick: (photo: PickedPhoto) => void;
 }
 
+interface ExtractedText {
+  fullText: string;
+  confidence: number;
+  isBookContent: boolean;
+  suggestedBookTitle?: string;
+  suggestedAuthor?: string;
+  tags?: string[];
+}
+
+interface SelectedBook {
+  id: string | null;
+  title: string;
+  author?: string;
+}
+
+interface CachedHighlight {
+  imageId: string;
+  extractedText: ExtractedText;
+  selectedText: string;
+  selectedBook: SelectedBook;
+  customNote: string;
+  tags: string[];
+  savedToReadwise: boolean;
+  savedBookId?: string;
+  savedAt?: string;
+}
+
 export function PhotoPicker({
   onPhotosSelected,
   onPhotoClick,
@@ -137,10 +164,9 @@ export function PhotoPicker({
           console.error("Failed to extract text for photo", photo.id, resp.status);
           return;
         }
-        const data = await resp.json();
+        const data: ExtractedText = await resp.json();
 
-        // Build the highlight cache structure expected by TextExtractor
-        const highlightData = {
+        const highlightData: CachedHighlight = {
           imageId: photo.id,
           extractedText: data,
           selectedText: data.fullText || "",
@@ -155,7 +181,7 @@ export function PhotoPicker({
           customNote: "",
           tags: data.tags || [],
           savedToReadwise: false,
-        } as any;
+        };
 
         localStorage.setItem(
           `highlight_${photo.id}`,
@@ -575,7 +601,7 @@ export function PhotoPicker({
                         alt={photo.filename}
                         className="w-full h-full object-cover rounded-lg"
                         onClick={() => onPhotoClick(photo)}
-                        onError={(e) => {
+                        onError={(e: any) => {
                           const img = e.target as HTMLImageElement;
                           // Show a placeholder with photo info
                           img.style.display = "none";
@@ -616,7 +642,7 @@ export function PhotoPicker({
 
                       {/* Delete button - appears on hover */}
                       <button
-                        onClick={(e) => {
+                        onClick={(e: any) => {
                           e.stopPropagation();
                           deletePhoto(photo.id);
                         }}
