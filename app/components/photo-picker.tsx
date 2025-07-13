@@ -43,7 +43,13 @@ export function PhotoPicker({
     try {
       const cached = localStorage.getItem(`highlight_${imageId}`);
       if (cached) {
-        const data = JSON.parse(cached);
+        const data: {
+          savedToReadwise?: boolean;
+          savedAt?: string;
+        } = JSON.parse(cached) as {
+          savedToReadwise?: boolean;
+          savedAt?: string;
+        };
         return {
           processed: true,
           savedToReadwise: data.savedToReadwise || false,
@@ -84,7 +90,7 @@ export function PhotoPicker({
         unique.set(photo.id, photo);
       }
     });
-    return Array.from(unique.values());
+    return Array.from(unique.values()) as PickedPhoto[];
   };
 
   // Load cached photos on component mount
@@ -95,7 +101,7 @@ export function PhotoPicker({
       console.log("Checking for cached photos:", !!cachedPhotos);
       if (cachedPhotos) {
         try {
-          const parsedPhotos = JSON.parse(cachedPhotos);
+          const parsedPhotos: PickedPhoto[] = JSON.parse(cachedPhotos) as PickedPhoto[];
           const uniquePhotos = deduplicatePhotos(parsedPhotos);
           console.log("Loading cached photos:", uniquePhotos.length);
           const sortedPhotos = sortPhotosByDate(uniquePhotos);
