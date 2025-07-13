@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import * as React from "react";
 import { useState, useEffect } from "react";
-import type { LucideIcon } from "lucide-react";
+import type { LucideProps } from "lucide-react";
+import type { ImageProps } from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -344,7 +345,9 @@ export function TextExtractor({ photo, onBack }: TextExtractorProps) {
                     </div>
                     <Textarea
                       value={selectedText}
-                      onChange={(e) => setSelectedText(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                        setSelectedText(e.target.value)
+                      }
                       placeholder="Edit the extracted text or select the portion you want to highlight..."
                       className="min-h-[200px]"
                     />
@@ -378,7 +381,9 @@ export function TextExtractor({ photo, onBack }: TextExtractorProps) {
                     <Textarea
                       id="custom-note"
                       value={customNote}
-                      onChange={(e) => setCustomNote(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                        setCustomNote(e.target.value)
+                      }
                       placeholder="Add any additional notes or context..."
                       className="min-h-[100px]"
                     />
@@ -389,7 +394,7 @@ export function TextExtractor({ photo, onBack }: TextExtractorProps) {
                     <Input
                       id="tags-input"
                       value={tags.join(", ")}
-                      onChange={(e) =>
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setTags(
                           e.target.value
                             .split(",")

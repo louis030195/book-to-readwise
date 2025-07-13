@@ -1,9 +1,9 @@
 "use client"
 
-import React from "react";
+import * as React from "react";
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
-import type { LucideIcon } from "lucide-react";
+import type { LucideProps } from "lucide-react";
 import { Camera, Loader2 } from "lucide-react"
 
 interface GooglePhotosAuthProps {

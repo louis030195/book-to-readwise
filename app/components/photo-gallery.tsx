@@ -1,6 +1,8 @@
 "use client"
 
-import React from "react";
+import * as React from "react";
+import type { LucideProps } from "lucide-react";
+import type { ImageProps } from "next/image";
 import { Card, CardContent } from "@/components/ui/card"
 import type { LucideIcon } from "lucide-react";
 import { Loader2, ImageIcon } from "lucide-react"
