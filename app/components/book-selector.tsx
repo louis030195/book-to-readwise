@@ -25,7 +25,7 @@ interface BookSelectorProps {
   onChange: (value: SelectedBook) => void;
 }
 
-export function BookSelector({ value, onChange }: BookSelectorProps) {
+export function BookSelector({ value, onChange }: BookSelectorProps): React.ReactElement {
   const [books, setBooks] = useState<BookItem[]>([]);
   const [filteredBooks, setFilteredBooks] = useState<BookItem[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -36,10 +36,9 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
 
   useEffect(() => {
     if (value.title.length > 0) {
-      const filtered = books.filter(
-        (book) =>
-          book.title.toLowerCase().includes(value.title.toLowerCase()) ||
-          book.author.toLowerCase().includes(value.title.toLowerCase())
+      const filtered = books.filter((book: BookItem): boolean =>
+        book.title.toLowerCase().includes(value.title.toLowerCase()) ||
+        book.author.toLowerCase().includes(value.title.toLowerCase())
       );
       setFilteredBooks(filtered);
       setShowSuggestions(true);
@@ -70,7 +69,7 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
     }
   }, [value, books, onChange]);
 
-  const fetchBooks = async () => {
+  const fetchBooks = async (): Promise<void> => {
     try {
       const response = await fetch("/api/readwise/books");
       const data = await response.json();
