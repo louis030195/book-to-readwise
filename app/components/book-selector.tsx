@@ -53,12 +53,12 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
       // 3. The typed title closely matches the first result
       if (filtered.length > 0 && !value.id) {
         const firstMatch = filtered[0];
-        const titleMatch = firstMatch.title
-          .toLowerCase()
-          .includes(value.title.toLowerCase());
-        const isCloseMatch = value.title.length > 10 && titleMatch; // Only auto-select for longer, more specific queries
+        // Only auto-select when the typed title EXACTLY matches an existing book (case-insensitive).
+        const isExactMatch =
+          firstMatch.title.trim().toLowerCase() ===
+          value.title.trim().toLowerCase();
 
-        if (isCloseMatch) {
+        if (isExactMatch) {
           console.log("Auto-selecting first matching book:", firstMatch);
           onChange({
             id: firstMatch.id,
@@ -109,8 +109,10 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
           value={value.title}
+          // Reset book ID when the user manually edits the title to ensure
+          // we don t accidentally attach the highlight to a previously-selected book.
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            onChange({ ...value, title: e.target.value })
+            onChange({ id: null, title: e.target.value, author: value.author })
           }
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
