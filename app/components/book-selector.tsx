@@ -1,8 +1,6 @@
 "use client";
 
-import type React from "react";
-import { useState, useEffect } from "react";
-import type { LucideIcon } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -109,7 +107,9 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
           value={value.title}
-          onChange={(e) => onChange({ ...value, title: e.target.value })}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            onChange({ ...value, title: e.target.value })
+          }
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
           placeholder="Search for a book or enter a new one..."
@@ -124,7 +124,7 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
               <div
                 key={book.id}
                 className="w-full justify-start p-3 h-auto cursor-pointer hover:bg-gray-50 flex items-center"
-                onMouseDown={(e) => {
+                onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
                   e.preventDefault();
                   handleBookSelect(book);
                 }}

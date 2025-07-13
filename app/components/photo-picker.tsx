@@ -1,8 +1,6 @@
 "use client";
 
-import type React from "react";
-import { useState, useEffect } from "react";
-import type { LucideIcon } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -77,8 +75,8 @@ export function PhotoPicker({
   const getFilteredPhotos = () => {
     const sortedPhotos = sortPhotosByDate(photos);
     if (showUnsentOnly) {
-      return sortedPhotos.filter(
-        (photo: PickedPhoto) => !getImageStatus(photo.id).savedToReadwise
+      return sortedPhotos.filter((photo: PickedPhoto) =>
+        !getImageStatus(photo.id).savedToReadwise
       );
     }
     return sortedPhotos;
@@ -243,7 +241,7 @@ export function PhotoPicker({
           return photo.mimeType.startsWith("image/");
         });
 
-        setPhotos((prevPhotos) => {
+        setPhotos((prevPhotos: PickedPhoto[]) => {
           const existingPhotoIds = new Set(
             prevPhotos.map((p: PickedPhoto) => p.id)
           );
@@ -535,7 +533,7 @@ export function PhotoPicker({
                         alt={photo.filename}
                         className="w-full h-full object-cover rounded-lg"
                         onClick={() => onPhotoClick(photo)}
-                        onError={(e) => {
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                           const img = e.target as HTMLImageElement;
                           // Show a placeholder with photo info
                           img.style.display = "none";
@@ -576,7 +574,7 @@ export function PhotoPicker({
 
                       {/* Delete button - appears on hover */}
                       <button
-                        onClick={(e) => {
+                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
                           deletePhoto(photo.id);
                         }}
