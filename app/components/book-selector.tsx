@@ -106,7 +106,7 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
         <Input
           value={value.title}
           // Reset book ID when the user manually edits the title to ensure
-          // we don t accidentally attach the highlight to a previously-selected book.
+          // we don't accidentally attach the highlight to a previously-selected book.
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             onChange({ id: null, title: e.target.value, author: value.author })
           }
