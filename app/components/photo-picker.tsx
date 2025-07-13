@@ -81,6 +81,8 @@ export function PhotoPicker({
   const [polling, setPolling] = useState(false);
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [showUnsentOnly, setShowUnsentOnly] = useState(true);
+  // Track which photos are currently undergoing background text extraction
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set<string>());
 
   const getImageStatus = (imageId: string) => {
     try {
@@ -191,6 +193,13 @@ export function PhotoPicker({
     // Extract text and cache for a single photo
     const extractAndCacheText = async (photo: PickedPhoto) => {
       if (isPhotoProcessed(photo.id)) return; // nothing to do
+
+      // Mark as processing so UI can show spinner
+      setProcessingIds((prev: Set<string>) => {
+        const next = new Set(prev);
+        next.add(photo.id);
+        return next;
+      });
       try {
         const imageUrl = `${photo.baseUrl}=w1024-h1024-c`;
         const resp = await fetch("/api/extract-text", {
@@ -229,6 +238,13 @@ export function PhotoPicker({
         setPhotos((prev: PickedPhoto[]) => [...prev]);
       } catch (err) {
         console.error("Error during background extraction for", photo.id, err);
+      } finally {
+        // Remove from processing set regardless of success/failure
+        setProcessingIds((prev: Set<string>) => {
+          const next = new Set(prev);
+          next.delete(photo.id);
+          return next;
+        });
       }
     };
 
@@ -657,6 +673,13 @@ export function PhotoPicker({
                           }
                         }}
                       />
+
+                      {/* Overlay spinner while the image is being processed */}
+                      {processingIds.has(photo.id) && (
+                        <div className="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center">
+                          <Loader2 className="h-6 w-6 text-white animate-spin" />
+                        </div>
+                      )}
 
                       {/* Status indicators */}
                       <div className="absolute top-2 right-2 flex gap-1">
