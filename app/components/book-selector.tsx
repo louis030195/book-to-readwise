@@ -2,14 +2,12 @@
 
 import * as React from "react";
 import { useState, useEffect } from "react";
-import type { LucideProps } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
-import { Book } from "lucide-react"; // Renamed to avoid redeclaration
+import { Book as BookIcon } from "lucide-react";
 
-interface Book {
+interface BookItem {
   id: string;
   title: string;
   author: string;
@@ -28,10 +26,9 @@ interface BookSelectorProps {
 }
 
 export function BookSelector({ value, onChange }: BookSelectorProps) {
-  const [books, setBooks] = useState<Book[]>([]);
-  const [filteredBooks, setFilteredBooks] = useState<Book[]>([]);
+  const [books, setBooks] = useState<BookItem[]>([]);
+  const [filteredBooks, setFilteredBooks] = useState<BookItem[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchBooks();
@@ -74,7 +71,6 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
   }, [value, books, onChange]);
 
   const fetchBooks = async () => {
-    setLoading(true);
     try {
       const response = await fetch("/api/readwise/books");
       const data = await response.json();
@@ -82,11 +78,11 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
     } catch (error) {
       console.error("Error fetching books:", error);
     } finally {
-      setLoading(false);
+      /* no-op */
     }
   };
 
-  const handleBookSelect = (book: Book) => {
+  const handleBookSelect = (book: BookItem) => {
     console.log("Selected book from dropdown:", book);
     onChange({ id: book.id, title: book.title, author: book.author });
     setShowSuggestions(false);
@@ -124,7 +120,7 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
       {showSuggestions && filteredBooks.length > 0 && (
         <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto">
           <CardContent className="p-0">
-            {filteredBooks.map((book: Book) => (
+            {filteredBooks.map((book: BookItem) => (
               <div
                 key={book.id}
                 className="w-full justify-start p-3 h-auto cursor-pointer hover:bg-gray-50 flex items-center"
@@ -133,7 +129,7 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
                   handleBookSelect(book);
                 }}
               >
-                <Book className="h-4 w-4 mr-3 flex-shrink-0" />
+                <BookIcon className="h-4 w-4 mr-3 flex-shrink-0" />
                 <div className="text-left">
                   <div className="font-medium">{book.title}</div>
                   <div className="text-sm text-gray-500">
