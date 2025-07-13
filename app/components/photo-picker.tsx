@@ -1,6 +1,8 @@
 "use client";
 
+import * as React from "react";
 import { useState, useEffect } from "react";
+import type { LucideProps } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -84,7 +86,13 @@ export function PhotoPicker({
     try {
       const cached = localStorage.getItem(`highlight_${imageId}`);
       if (cached) {
-        const data = JSON.parse(cached);
+        const data: {
+          savedToReadwise?: boolean;
+          savedAt?: string;
+        } = JSON.parse(cached) as {
+          savedToReadwise?: boolean;
+          savedAt?: string;
+        };
         return {
           processed: true,
           savedToReadwise: data.savedToReadwise || false,
@@ -110,11 +118,22 @@ export function PhotoPicker({
   const getFilteredPhotos = () => {
     const sortedPhotos = sortPhotosByDate(photos);
     if (showUnsentOnly) {
-      return sortedPhotos.filter(
-        (photo: PickedPhoto) => !getImageStatus(photo.id).savedToReadwise
+      return sortedPhotos.filter((photo: PickedPhoto) =>
+        !getImageStatus(photo.id).savedToReadwise
       );
     }
     return sortedPhotos;
+  };
+
+  // Remove duplicate photos based on their Google Photos media id
+  const deduplicatePhotos = (photos: PickedPhoto[]) => {
+    const unique = new Map<string, PickedPhoto>();
+    photos.forEach((photo) => {
+      if (!unique.has(photo.id)) {
+        unique.set(photo.id, photo);
+      }
+    });
+    return Array.from(unique.values()) as PickedPhoto[];
   };
 
   // Load cached photos on component mount
@@ -125,9 +144,10 @@ export function PhotoPicker({
       console.log("Checking for cached photos:", !!cachedPhotos);
       if (cachedPhotos) {
         try {
-          const parsedPhotos = JSON.parse(cachedPhotos);
-          console.log("Loading cached photos:", parsedPhotos.length);
-          const sortedPhotos = sortPhotosByDate(parsedPhotos);
+          const parsedPhotos: PickedPhoto[] = JSON.parse(cachedPhotos) as PickedPhoto[];
+          const uniquePhotos = deduplicatePhotos(parsedPhotos);
+          console.log("Loading cached photos:", uniquePhotos.length);
+          const sortedPhotos = sortPhotosByDate(uniquePhotos);
           setPhotos(sortedPhotos);
           onPhotosSelected(sortedPhotos);
           console.log("Cached photos loaded successfully");
@@ -148,7 +168,11 @@ export function PhotoPicker({
   // Save photos to cache whenever photos change
   useEffect(() => {
     if (photos.length > 0) {
-      localStorage.setItem("selectedPhotos", JSON.stringify(photos));
+      // Always persist a deduplicated list
+      localStorage.setItem(
+        "selectedPhotos",
+        JSON.stringify(deduplicatePhotos(photos))
+      );
       console.log("Cached photos:", photos.length);
     }
   }, [photos]);
@@ -615,7 +639,7 @@ export function PhotoPicker({
                         alt={photo.filename}
                         className="w-full h-full object-cover rounded-lg"
                         onClick={() => onPhotoClick(photo)}
-                        onError={(e: SyntheticEvent<HTMLImageElement, Event>) => {
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                           const img = e.target as HTMLImageElement;
                           // Show a placeholder with photo info
                           img.style.display = "none";
@@ -656,7 +680,7 @@ export function PhotoPicker({
 
                       {/* Delete button - appears on hover */}
                       <button
-                        onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
                           deletePhoto(photo.id);
                         }}

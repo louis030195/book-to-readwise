@@ -1,6 +1,8 @@
 "use client";
 
+import * as React from "react";
 import { useState, useEffect } from "react";
+import type { LucideProps } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -107,7 +109,9 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
           value={value.title}
-          onChange={(e) => onChange({ ...value, title: e.target.value })}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            onChange({ ...value, title: e.target.value })
+          }
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
           placeholder="Search for a book or enter a new one..."
@@ -118,11 +122,11 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
       {showSuggestions && filteredBooks.length > 0 && (
         <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto">
           <CardContent className="p-0">
-            {filteredBooks.map((book) => (
+            {filteredBooks.map((book: Book) => (
               <div
                 key={book.id}
                 className="w-full justify-start p-3 h-auto cursor-pointer hover:bg-gray-50 flex items-center"
-                onMouseDown={(e) => {
+                onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
                   e.preventDefault();
                   handleBookSelect(book);
                 }}

@@ -1,6 +1,10 @@
 "use client"
 
+import * as React from "react";
+import type { LucideProps } from "lucide-react";
+import type { ImageProps } from "next/image";
 import { Card, CardContent } from "@/components/ui/card"
+import type { LucideIcon } from "lucide-react";
 import { Loader2, ImageIcon } from "lucide-react"
 import Image from "next/image"
 
@@ -40,7 +44,7 @@ export function PhotoGallery({ photos, onPhotoSelect, loading }: PhotoGalleryPro
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {photos.map((photo) => (
+      {photos.map((photo: Photo) => (
         <Card
           key={photo.id}
           className="cursor-pointer hover:shadow-lg transition-shadow"
