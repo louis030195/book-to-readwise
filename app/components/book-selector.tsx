@@ -2,14 +2,12 @@
 
 import * as React from "react";
 import { useState, useEffect } from "react";
-import type { LucideProps } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
-import { Book } from "lucide-react"; // Renamed to avoid redeclaration
+import { Book as BookIcon } from "lucide-react";
 
-interface Book {
+interface BookItem {
   id: string;
   title: string;
   author: string;
@@ -27,11 +25,10 @@ interface BookSelectorProps {
   onChange: (value: SelectedBook) => void;
 }
 
-export function BookSelector({ value, onChange }: BookSelectorProps) {
-  const [books, setBooks] = useState<Book[]>([]);
-  const [filteredBooks, setFilteredBooks] = useState<Book[]>([]);
+export function BookSelector({ value, onChange }: BookSelectorProps): React.ReactElement {
+  const [books, setBooks] = useState<BookItem[]>([]);
+  const [filteredBooks, setFilteredBooks] = useState<BookItem[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchBooks();
@@ -39,10 +36,9 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
 
   useEffect(() => {
     if (value.title.length > 0) {
-      const filtered = books.filter(
-        (book) =>
-          book.title.toLowerCase().includes(value.title.toLowerCase()) ||
-          book.author.toLowerCase().includes(value.title.toLowerCase())
+      const filtered = books.filter((book: BookItem): boolean =>
+        book.title.toLowerCase().includes(value.title.toLowerCase()) ||
+        book.author.toLowerCase().includes(value.title.toLowerCase())
       );
       setFilteredBooks(filtered);
       setShowSuggestions(true);
@@ -53,12 +49,12 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
       // 3. The typed title closely matches the first result
       if (filtered.length > 0 && !value.id) {
         const firstMatch = filtered[0];
-        const titleMatch = firstMatch.title
-          .toLowerCase()
-          .includes(value.title.toLowerCase());
-        const isCloseMatch = value.title.length > 10 && titleMatch; // Only auto-select for longer, more specific queries
+        // Only auto-select when the typed title EXACTLY matches an existing book (case-insensitive).
+        const isExactMatch =
+          firstMatch.title.trim().toLowerCase() ===
+          value.title.trim().toLowerCase();
 
-        if (isCloseMatch) {
+        if (isExactMatch) {
           console.log("Auto-selecting first matching book:", firstMatch);
           onChange({
             id: firstMatch.id,
@@ -73,8 +69,7 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
     }
   }, [value, books, onChange]);
 
-  const fetchBooks = async () => {
-    setLoading(true);
+  const fetchBooks = async (): Promise<void> => {
     try {
       const response = await fetch("/api/readwise/books");
       const data = await response.json();
@@ -82,11 +77,11 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
     } catch (error) {
       console.error("Error fetching books:", error);
     } finally {
-      setLoading(false);
+      /* no-op */
     }
   };
 
-  const handleBookSelect = (book: Book) => {
+  const handleBookSelect = (book: BookItem) => {
     console.log("Selected book from dropdown:", book);
     onChange({ id: book.id, title: book.title, author: book.author });
     setShowSuggestions(false);
@@ -109,8 +104,10 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
           value={value.title}
+          // Reset book ID when the user manually edits the title to ensure
+          // we don't accidentally attach the highlight to a previously-selected book.
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            onChange({ ...value, title: e.target.value })
+            onChange({ id: null, title: e.target.value, author: value.author })
           }
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
@@ -122,7 +119,7 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
       {showSuggestions && filteredBooks.length > 0 && (
         <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto">
           <CardContent className="p-0">
-            {filteredBooks.map((book: Book) => (
+            {filteredBooks.map((book: BookItem) => (
               <div
                 key={book.id}
                 className="w-full justify-start p-3 h-auto cursor-pointer hover:bg-gray-50 flex items-center"
@@ -131,7 +128,7 @@ export function BookSelector({ value, onChange }: BookSelectorProps) {
                   handleBookSelect(book);
                 }}
               >
-                <Book className="h-4 w-4 mr-3 flex-shrink-0" />
+                <BookIcon className="h-4 w-4 mr-3 flex-shrink-0" />
                 <div className="text-left">
                   <div className="font-medium">{book.title}</div>
                   <div className="text-sm text-gray-500">

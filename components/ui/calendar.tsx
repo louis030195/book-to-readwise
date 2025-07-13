@@ -53,10 +53,17 @@ function Calendar({
         day_hidden: "invisible",
         ...classNames,
       }}
+      // Cast to `any` since IconLeft/IconRight are not yet included in the
+      // public `CustomComponents` typings shipped with `react-day-picker`.
+      // They are, however, supported at runtime.
       components={{
-        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
-      }}
+        IconLeft: (props: React.SVGProps<SVGSVGElement>) => (
+          <ChevronLeft {...props} className="h-4 w-4" />
+        ),
+        IconRight: (props: React.SVGProps<SVGSVGElement>) => (
+          <ChevronRight {...props} className="h-4 w-4" />
+        ),
+      } as any}
       {...props}
     />
   )
