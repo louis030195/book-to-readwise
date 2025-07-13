@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import type { SyntheticEvent, MouseEvent } from "react";
 import {
   ExternalLink,
   Loader2,
@@ -55,6 +56,19 @@ interface CachedHighlight {
   savedAt?: string;
 }
 
+interface GoogleMediaItem {
+  id: string;
+  mediaFile: {
+    baseUrl: string;
+    filename?: string;
+    mimeType: string;
+  };
+  mediaMetadata?: {
+    creationTime?: string;
+  };
+  creationTime?: string;
+}
+
 export function PhotoPicker({
   onPhotosSelected,
   onPhotoClick,
@@ -85,7 +99,7 @@ export function PhotoPicker({
 
   // Sort photos by creation time (newest first)
   const sortPhotosByDate = (photos: PickedPhoto[]) => {
-    return [...photos].sort((a, b) => {
+    return [...photos].sort((a: PickedPhoto, b: PickedPhoto) => {
       const dateA = a.creationTime ? new Date(a.creationTime).getTime() : 0;
       const dateB = b.creationTime ? new Date(b.creationTime).getTime() : 0;
       return dateB - dateA; // Newest first
@@ -97,7 +111,7 @@ export function PhotoPicker({
     const sortedPhotos = sortPhotosByDate(photos);
     if (showUnsentOnly) {
       return sortedPhotos.filter(
-        (photo) => !getImageStatus(photo.id).savedToReadwise
+        (photo: PickedPhoto) => !getImageStatus(photo.id).savedToReadwise
       );
     }
     return sortedPhotos;
@@ -292,7 +306,7 @@ export function PhotoPicker({
 
       if (mediaData.mediaItems && mediaData.mediaItems.length > 0) {
         const selectedPhotos: PickedPhoto[] = mediaData.mediaItems.map(
-          (item: any) => ({
+          (item: GoogleMediaItem) => ({
             id: item.id,
             baseUrl: item.mediaFile.baseUrl,
             filename: item.mediaFile.filename || `photo_${item.id}`,
@@ -309,7 +323,7 @@ export function PhotoPicker({
           return photo.mimeType.startsWith("image/");
         });
 
-        setPhotos((prevPhotos) => {
+        setPhotos((prevPhotos: PickedPhoto[]) => {
           const existingPhotoIds = new Set(
             prevPhotos.map((p: PickedPhoto) => p.id)
           );
@@ -408,7 +422,7 @@ export function PhotoPicker({
 
   const deletePhoto = (photoId: string) => {
     console.log("Deleting photo:", photoId);
-    const updatedPhotos = photos.filter((photo) => photo.id !== photoId);
+    const updatedPhotos = photos.filter((photo: PickedPhoto) => photo.id !== photoId);
     setPhotos(updatedPhotos);
 
     // Update cache
@@ -556,7 +570,7 @@ export function PhotoPicker({
                   <span>
                     {
                       photos.filter(
-                        (photo) => getImageStatus(photo.id).processed
+                        (photo: PickedPhoto) => getImageStatus(photo.id).processed
                       ).length
                     }{" "}
                     processed
@@ -567,7 +581,7 @@ export function PhotoPicker({
                   <span>
                     {
                       photos.filter(
-                        (photo) => getImageStatus(photo.id).savedToReadwise
+                        (photo: PickedPhoto) => getImageStatus(photo.id).savedToReadwise
                       ).length
                     }{" "}
                     saved to Readwise
@@ -589,7 +603,7 @@ export function PhotoPicker({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {getFilteredPhotos().map((photo) => {
+              {getFilteredPhotos().map((photo: PickedPhoto) => {
                 const status = getImageStatus(photo.id);
                 return (
                   <div key={photo.id} className="relative group">
@@ -601,7 +615,7 @@ export function PhotoPicker({
                         alt={photo.filename}
                         className="w-full h-full object-cover rounded-lg"
                         onClick={() => onPhotoClick(photo)}
-                        onError={(e: any) => {
+                        onError={(e: SyntheticEvent<HTMLImageElement, Event>) => {
                           const img = e.target as HTMLImageElement;
                           // Show a placeholder with photo info
                           img.style.display = "none";
@@ -642,7 +656,7 @@ export function PhotoPicker({
 
                       {/* Delete button - appears on hover */}
                       <button
-                        onClick={(e: any) => {
+                        onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
                           deletePhoto(photo.id);
                         }}
